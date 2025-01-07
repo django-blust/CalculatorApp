@@ -1,22 +1,55 @@
 package com.example.calculator
-
 import android.os.Bundle
+
+
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.Image
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.navigation.compose.rememberNavController
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+
+import androidx.navigation.NavController
+
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import com.example.calculator.ui.theme.CalculatorTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,119 +58,248 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CalculatorTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    innerPadding
-                    SimpleCalculator()
-                }
+                ScaffoldApp()
             }
         }
     }
 }
 
+
 @Composable
-fun SimpleCalculator() {
-    var input by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("") }
+fun ScaffoldApp(modifier: Modifier = Modifier) {
+    val navController = rememberNavController()
+
+    Scaffold { paddingValues ->
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = modifier.padding(paddingValues)
+        ) {
+            composable("home") { HomeScreen(navController) }
+            composable("converter") { Converter(navController) }
+
+        }
+    }
+}
+
+
+
+@Composable
+fun HomeScreen(navController: NavController) {
+    var inputNum by remember { mutableStateOf("") }
+    var resultNum by remember { mutableStateOf("0") }
+    var firstOperand by remember { mutableStateOf("") }
+    var operator by remember { mutableStateOf<String?>(null) }
+    var displayEquation by remember { mutableStateOf("") }
+
+    val buttons = listOf(
+        listOf("7", "8", "9", "÷"),
+        listOf("4", "5", "6", "×"),
+        listOf("1", "2", "3", "-"),
+        listOf("C", "0", "=", "+")
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(8.dp)
     ) {
+        NavRimon(navController = navController)
+        // Display the equation and result
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
-                .padding(8.dp),
-            contentAlignment = Alignment.CenterEnd
+                .height(350.dp),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            Text(
-                text = input,
-                fontSize = 28.sp,
-                textAlign = TextAlign.End,
-                modifier = Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .padding(8.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Text(
-                text = result,
-                fontSize = 36.sp,
-                textAlign = TextAlign.End,
-                modifier = Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        val buttons = listOf(
-            listOf("7", "8", "9", "C"),
-            listOf("4", "5", "6", "+"),
-            listOf("1", "2", "3", "-"),
-            listOf("=","0", "/")
-        )
-
-        buttons.forEach { row ->
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .padding(16.dp)
             ) {
-                row.forEach { label ->
-                    Button(
-                        onClick = {
-                            when (label) {
-                                "C" -> {
-                                    input = ""
-                                    result = ""
-                                }
-                                "=" -> {
-                                    result = calculateSimpleResult(input)
-                                }
-                                else -> {
-                                    input += label
+                Text(
+                    text = displayEquation,
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    maxLines = 2
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = resultNum,
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                    maxLines = 1
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            contentPadding = PaddingValues(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(buttons.flatten()) { button ->
+                FloatingActionButton(
+                    onClick = {
+                        when (button) {
+                            "C" -> {
+                                inputNum = ""
+                                resultNum = "0"
+                                firstOperand = ""
+                                operator = null
+                                displayEquation = ""
+                            }
+                            "=" -> {
+                                if (firstOperand.isNotEmpty() && operator != null) {
+                                    try {
+                                        val secondOperand = inputNum
+                                        val result = when (operator) {
+                                            "+" -> firstOperand.toDouble() + secondOperand.toDouble()
+                                            "-" -> firstOperand.toDouble() - secondOperand.toDouble()
+                                            "×" -> firstOperand.toDouble() * secondOperand.toDouble()
+                                            "÷" -> firstOperand.toDouble() / secondOperand.toDouble()
+                                            else -> null
+                                        }
+                                        displayEquation = "$displayEquation "
+                                        resultNum = result?.toString() ?: "Error"
+                                        inputNum = ""
+                                        firstOperand = resultNum
+                                        operator = null
+                                    } catch (e: Exception) {
+                                        resultNum = "Error"
+                                    }
                                 }
                             }
-                        },
-                        shape = CircleShape,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .padding(4.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text(text = label, fontSize = 24.sp, color = MaterialTheme.colorScheme.onPrimary)
-                    }
+                            "+", "-", "×", "÷" -> {
+                                if (inputNum.isNotEmpty()) {
+                                    firstOperand = inputNum
+                                    operator = button
+                                    displayEquation = "$firstOperand $operator"
+                                    inputNum = ""
+                                }
+                            }
+                            else -> {
+                                inputNum += button
+                                displayEquation = "$displayEquation$button"
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .fillMaxWidth(),
+                ) {
+                    Text(
+                        text = button,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
                 }
             }
         }
     }
 }
 
-fun calculateSimpleResult(input: String): String {
-    return try {
-        val parts = input.split("+", "-", "/")
-        if (parts.size != 2) return "Error"
-        val num1 = parts[0].toFloat()
-        val num2 = parts[1].toFloat()
 
-        when {
-            input.contains("+") -> (num1 + num2).toString()
-            input.contains("-") -> (num1 - num2).toString()
-            input.contains("/") -> if (num2 != 0f) (num1 / num2).toString() else "Error"
-            else -> "Error"
+
+@Composable
+fun Converter(navController: NavController) {
+    val converters = listOf(
+        "Length" to R.drawable.length,
+        "Weight" to R.drawable.mass,
+        "Volume" to R.drawable.volume,
+        "Temperature" to R.drawable.temperature,
+        "Speed" to R.drawable.speed,
+        "Area" to R.drawable.area,
+        "Time" to R.drawable.time,
+        "Age" to R.drawable.age,
+        "Speed" to R.drawable.speed,
+        "Time Left" to R.drawable.timeleft,
+        "BMI" to R.drawable.bmi,
+        "Data" to R.drawable.data,
+
+        "Time" to R.drawable.time,
+        "Age" to R.drawable.age,
+        "Speed" to R.drawable.speed,
+        "Time Left" to R.drawable.timeleft,
+        "BMI" to R.drawable.bmi,
+        "Data" to R.drawable.data
+    )
+
+    Column (modifier = Modifier
+        .fillMaxSize()
+        .padding(8.dp)
+
+    ){
+        NavRimon(navController)
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            contentPadding = PaddingValues(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(56.dp)
+
+        ) {
+            items(converters){(title, drawableRes) ->
+                Column (horizontalAlignment = Alignment.CenterHorizontally){
+
+                    Image(
+                        painter = painterResource(id = drawableRes),
+                        contentDescription = title,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text(
+                        text = title
+                    )
+                }
+
+            }
         }
-    } catch (e: Exception) {
-        "Error"
+
+    }
+
+}
+
+
+
+
+@Composable
+fun NavRimon(navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            TextButton(onClick = { navController.navigate("home") }) {
+                Text(
+                    text = "Calculator",
+                    style = TextStyle(
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                        color = Color.White
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+
+            TextButton(onClick = { navController.navigate("converter") }) {
+                Text(
+                    text = "Converter",
+                    style = TextStyle(
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                        color = Color.White
+                    )
+                )
+            }
+        }
     }
 }
+
